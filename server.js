@@ -6,7 +6,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ضع رابطك هنا بين علامتي التنصيص
-const myDatabaseLink = "انسخ_رابط_المونجو_هنا"; 
+const myDatabaseLink = "mongodb://mongo:krKokQXjLADvZqjrbNRZBrddlxwzyhfo@mongodb.railway.internal:27017"; 
 
 mongoose.connect(myDatabaseLink)
     .then(() => console.log('✅ Connected to MongoDB Successfully!'))
