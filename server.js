@@ -1,16 +1,15 @@
 const express = require('express');
+const path = require('path');
 const app = express();
 
-// استخدام المنفذ الذي توفره الاستضافة أو 3000 محلياً
 const PORT = process.env.PORT || 3000;
 
+// هذا السطر هو السر: يخبر السيرفر بفتح الملفات من مجلد public
+app.use(express.static(path.join(__dirname, 'public')));
+
+// عندما يفتح الشخص الرابط، يتم إرسال ملف index.html له
 app.get('/', (req, res) => {
-    res.send(`
-        <body style="background-color: #0f0f0f; color: red; text-align: center; font-family: sans-serif; padding-top: 100px;">
-            <h1>TS Store is Online</h1>
-            <p style="color: white;">Welcome to your FiveM Store project.</p>
-        </body>
-    `);
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {
