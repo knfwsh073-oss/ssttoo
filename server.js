@@ -4,83 +4,44 @@ const path = require('path');
 const cors = require('cors');
 const app = express();
 
-// إعدادات أساسية
-const PORT = process.env.PORT || 3000;
-app.use(express.json()); // للسماح باستقبال بيانات JSON من لوحة التحكم
+app.use(express.json());
 app.use(cors());
-app.use(express.static(__dirname)); // لتشغيل ملفات HTML والصور من المجلد الرئيسي
+app.use(express.static(__dirname));
 
-// 1. الربط مع قاعدة البيانات (تلقائي عبر Railway أو يدوي)
-const MONGO_URL = process.env.MONGO_URL || "mongodb://mongo:IxndzRotERjBWgdeSkMaHfqJjiDrcLhU@mongodb.railway.internal:27017"; 
+// الربط المباشر واليدوي لضمان عمل الداتا فوراً
+const MONGO_URL = "mongodb://mongo:IxndzRotERjBWgdeSkMaHfqJjiDrcLhU@mongodb.railway.internal:27017"; 
 
 mongoose.connect(MONGO_URL)
     .then(() => console.log('✅ Connected to MongoDB Successfully!'))
-    .catch(err => console.log('❌ Database Connection Error:', err));
+    .catch(err => console.log('❌ DB Connection Error:', err));
 
-// 2. تعريف نماذج البيانات (Schemas)
-const Product = mongoose.model('Product', new mongoose.Schema({
-    name: String, image: String, description: String, 
-    features: [String], price: Number, 
-    discount: { active: Boolean, percent: Number, duration: String },
-    category: String // سيارات أو مابات
-}));
+// تعريف الجداول (المنتجات، الموظفين، الخصومات)
+const Product = mongoose.model('Product', new mongoose.Schema({ name: String, price: Number, image: String, description: String, features: Array, discount: Object }, { strict: false }));
+const Staff = mongoose.model('Staff', new mongoose.Schema({}, { strict: false }));
+const Coupon = mongoose.model('Coupon', new mongoose.Schema({}, { strict: false }));
 
-const Staff = mongoose.model('Staff', new mongoose.Schema({
-    email: String, password: String, permissions: Object
-}));
+// --- المسارات الذكية (ترد على أي طلب يرسله Z AI) ---
 
-const Member = mongoose.model('Member', new mongoose.Schema({
-    username: String, email: String, joinDate: { type: Date, default: Date.now }
-}));
+// استقبال إضافة أي شيء (منتج، موظف، كود خصم)
+app.post('/api/admin/:type', async (req, res) => {
+    try {
+        const type = req.params.type;
+        let Model = (type === 'products') ? Product : (type === 'staff') ? Staff : Coupon;
+        const entry = new Model(req.body);
+        await entry.save();
+        res.status(200).json({ success: true });
+    } catch (err) { res.status(500).send(err); }
+});
 
-const Coupon = mongoose.model('Coupon', new mongoose.Schema({
-    code: String, discount: Number
-}));
-
-// 3. المسارات البرمجية (API Routes)
-
-// جلب المنتجات للجميع
+// جلب المنتجات ليراها الجميع
 app.get('/api/products', async (req, res) => {
-    try {
-        const products = await Product.find();
-        res.json(products);
-    } catch (err) { res.status(500).send(err); }
+    const products = await Product.find();
+    res.json(products);
 });
 
-// إضافة منتج جديد (من لوحة التحكم)
-app.post('/api/admin/add-product', async (req, res) => {
-    try {
-        const newProduct = new Product(req.body);
-        await newProduct.save();
-        res.status(200).json({ message: "تم الحفظ بنجاح" });
-    } catch (err) { res.status(500).send(err); }
-});
-
-// حذف منتج
-app.delete('/api/admin/delete-product/:id', async (req, res) => {
-    await Product.findByIdAndDelete(req.params.id);
-    res.send("تم الحذف");
-});
-
-// إدارة الموظفين
-app.post('/api/admin/add-staff', async (req, res) => {
-    const staff = new Staff(req.body);
-    await staff.save();
-    res.send("تمت إضافة الموظف");
-});
-
-// إدارة أكواد الخصم
-app.post('/api/admin/add-coupon', async (req, res) => {
-    const coupon = new Coupon(req.body);
-    await coupon.save();
-    res.send("تم تفعيل الكود");
-});
-
-// 4. تشغيل الموقع
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.listen(PORT, () => {
-    console.log(`🚀 TS Store Server is running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Server active on port ${PORT}`));
